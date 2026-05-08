@@ -1,0 +1,286 @@
+{
+    "SSO": {
+        "enabled": false,
+        "provider": "authentik",
+        "discovery_url": "",
+        "client_id": "YOUR_TRAKT_CLIENT_ID",
+        "client_secret": "YOUR_TRAKT_CLIENT_SECRET",
+        "default_role": "user",
+        "auto_provision": true,
+        "redirect_uri_base": "",
+        "disable_local_auth": false
+    },
+    "UI Settings": {
+        "enable_user_system": true,
+        "use_24hour_format": true,
+        "compact_view": false,
+        "enable_phalanx_db": false,
+        "disable_auto_browser": false,
+        "program_logo": "Default",
+        "hide_support_message": false,
+        "recently_added_limit": 5,
+        "recently_upgraded_limit": 5,
+        "upcoming_releases_start_limit": 0,
+        "upcoming_releases_end_limit": 28,
+        "date_format": "%Y-%m-%d",
+        "time_format": "%H:%M:%S",
+        "enable_caching": false
+    },
+    "Plex": {
+        "url": "",
+        "token": "",
+        "movie_libraries": "Movies",
+        "shows_libraries": "Shows",
+        "update_plex_on_file_discovery": false,
+        "mounted_file_location": "/mnt/zurg/__all__",
+        "disable_plex_library_checks": false
+    },
+    "File Management": {
+        "file_collection_management": "Jellyfin",
+        "original_files_path": "/mnt/zurg/__all__",
+        "symlinked_files_path": "/mnt/symlinked",
+        "symlink_organize_by_type": true,
+        "symlink_organize_by_resolution": false,
+        "symlink_organize_by_version": false,
+        "symlink_folder_order": "type,version,resolution",
+        "process_non_checking_items": false,
+        "plex_url_for_symlink": "",
+        "plex_token_for_symlink": "",
+        "media_server_type": "jellyfin"
+    },
+    "Debrid Provider": {
+        "provider": "RealDebrid",
+        "api_key": "YOUR_API_KEY"
+    },
+    "TMDB": {
+        "api_key": "YOUR_API_KEY",
+        "certification_region": "US"
+    },
+    "TVDB": {
+        "api_key": "YOUR_API_KEY"
+    },
+    "MDBList": {
+        "api_key": "YOUR_API_KEY",
+        "cache_duration": 24
+    },
+    "Staleness Threshold": {
+        "staleness_threshold": 7
+    },
+    "Sync Deletions": {
+        "sync_deletions": true
+    },
+    "Metadata Battery": {
+        "url": "http://localhost:50051"
+    },
+    "Queue": {
+        "queue_sort_order": "None",
+        "sort_by_release_date_desc": false,
+        "content_source_priority": "",
+        "wake_limit": "24",
+        "sleep_duration_minutes": 30,
+        "blacklist_final_scrape_delay_hours": 0,
+        "movie_airtime_offset": "0",
+        "episode_airtime_offset": "0",
+        "blacklist_duration": "30",
+        "enable_pause_schedule": false,
+        "pause_start_time": "00:00",
+        "pause_end_time": "00:00",
+        "main_loop_sleep_seconds": 0.0,
+        "item_process_delay_seconds": 0.0,
+        "pre_release_scrape_days": 0
+    },
+    "Scraping": {
+        "uncached_content_handling": "None",
+        "filter_trash_releases": true,
+        "minimum_scrape_score": 0.0,
+        "upgrade_similarity_threshold": 0.95,
+        "hybrid_mode": false,
+        "jackett_seeders_only": true,
+        "ultimate_sort_order": "None",
+        "soft_max_size_gb": false,
+        "enable_upgrading": false,
+        "upgrading_percentage_threshold": 0.1,
+        "delayed_upgrade_scrape_days": 0,
+        "enable_upgrading_cleanup": true,
+        "disable_adult": true,
+        "trakt_early_releases": false,
+        "trakt_rate_limit_enabled": true,
+        "scraper_timeout": 5,
+        "versions": {},
+        "accept_uncached_within_hours": 0
+    },
+    "Trakt": {
+        "client_id": "YOUR_TRAKT_CLIENT_ID",
+        "client_secret": "YOUR_TRAKT_CLIENT_SECRET"
+    },
+    "Debug": {
+        "logging_level": "DEBUG",
+        "skip_initial_plex_update": false,
+        "disable_unblacklisting": true,
+        "auto_run_program": false,
+        "disable_initialization": false,
+        "use_symlinks_on_windows": false,
+        "sort_by_uncached_status": false,
+        "enable_plex_removal_caching": true,
+        "content_source_check_period": {},
+        "checking_queue_period": 3600,
+        "rescrape_missing_files": false,
+        "enable_reverse_order_scraping": false,
+        "disable_not_wanted_check": false,
+        "plex_watchlist_removal": false,
+        "plex_watchlist_keep_series": false,
+        "trakt_watchlist_removal": false,
+        "trakt_watchlist_keep_series": false,
+        "symlink_movie_template": "{title} ({year})/{title} ({year}) - {imdb_id} - {version} - ({original_filename})",
+        "symlink_episode_template": "{title} ({year})/Season {season_number:02d}/{title} ({year}) - S{season_number:02d}E{episode_number:02d} - {episode_title} - {imdb_id} - {version} - ({original_filename})",
+        "allow_partial_overseerr_requests": false,
+        "timezone_override": "",
+        "filename_filter_out_list": "",
+        "anime_renaming_using_anidb": true,
+        "enable_separate_anime_folders": false,
+        "enable_separate_documentary_folders": false,
+        "movies_folder_name": "Movies",
+        "tv_shows_folder_name": "TV Shows",
+        "anime_movies_folder_name": "Anime Movies",
+        "anime_tv_shows_folder_name": "Anime TV Shows",
+        "documentary_movies_folder_name": "Documentary Movies",
+        "documentary_tv_shows_folder_name": "Documentary TV Shows",
+        "check_for_updates": true,
+        "disable_content_source_caching": false,
+        "do_not_add_plex_watch_history_items_to_queue": false,
+        "enable_crash_test": false,
+        "enable_library_maintenance_task": false,
+        "enable_detailed_notification_information": false,
+        "enable_granular_version_additions": true,
+        "enable_unmatched_items_check": true,
+        "nas_paths": [],
+        "ignore_wanted_queue_throttling": false,
+        "upgrade_queue_duration_hours": 24,
+        "cinesync_path": "",
+        "emby_jellyfin_url": "",
+        "emby_jellyfin_token": "",
+        "enable_tracemalloc": false,
+        "tracemalloc_sample_rate": 100,
+        "plex_removal_cache_delay_minutes": 360,
+        "emphasize_number_of_items_over_quality": true,
+        "truncate_episode_notifications": false,
+        "apply_to_anime_tv_shows": true,
+        "apply_to_documentary_movies": true,
+        "apply_to_documentary_tv_shows": true,
+        "only_current_file": false,
+        "sanitizer_replacement_character": "_",
+        "max_upgrading_score": 0.0,
+        "delayed_scrape_based_on_score": false,
+        "delayed_scrape_time_limit": 6.0,
+        "minimum_scrape_score": 0.0,
+        "scale_final_scores": false,
+        "use_alternate_scrape_time_strategy": false,
+        "alternate_scrape_time_24h": "00:00",
+        "skip_initial_multi_scrape_for_new_content": false,
+        "unblacklisting_cutoff_date": "",
+        "symlink_organize_by_type": true
+    },
+    "Scrapers": {},
+    "Content Sources": {},
+    "Notifications": {},
+    "Reverse Parser": {
+        "version_terms": {},
+        "default_version": ""
+    },
+    "Subtitle Settings": {
+        "enable_subtitles": false,
+        "apply_to_movies": true,
+        "apply_to_tv_shows": true,
+        "apply_to_anime_movies": true,
+        "apply_to_anime_tv_shows": true,
+        "apply_to_documentary_movies": true,
+        "apply_to_documentary_tv_shows": true,
+        "only_current_file": false,
+        "opensubtitles_username": "",
+        "opensubtitles_password": "",
+        "subtitle_languages": "eng,zho",
+        "include_ai_translated_subtitles": true,
+        "subtitle_providers": [
+            "opensubtitles",
+            "opensubtitlescom",
+            "podnapisi",
+            "tvsubtitles"
+        ],
+        "user_agent": "SubDownloader/1.0 (your-email@example.com)",
+        "probe_for_embedded_subtitles": false
+    },
+    "Custom Post-Processing": {
+        "enable_custom_script": false,
+        "custom_script_path": "",
+        "custom_script_args": "{title} {imdb_id}"
+    },
+    "System Load Regulation": {
+        "cpu_threshold_percent": 75,
+        "ram_threshold_percent": 75,
+        "regulation_increase_step_seconds": 1.0,
+        "regulation_decrease_step_seconds": 1.0,
+        "regulation_max_sleep_seconds": 60.0
+    },
+    "Library Manager": {
+        "primary_artwork_source": "TMDB",
+        "ghostlist_mode": false,
+        "remove_from_content_sources": true,
+        "hide_season_zero": true
+    },
+    "Discover Settings": {
+        "hide_no_rating": false,
+        "hide_no_poster": false,
+        "only_show_missing": false,
+        "tv_show_episode_view": "discover"
+    },
+    "Bazarr Integration": {
+        "enabled": false,
+        "api_key": "YOUR_API_KEY",
+        "service_type": "auto",
+        "spoofed_version": "5.14.0.9383",
+        "delete_subtitles_on_removal": true
+    },
+    "AI Assistant": {
+        "enabled": false,
+        "openclaw_url": "",
+        "openclaw_token": "",
+        "agent_id": "main",
+        "health_notifications": true,
+        "health_check_interval": 900,
+        "enable_settings_assistant": true,
+        "enable_proactive_notifications": true,
+        "enable_recommendations": true,
+        "enable_habit_tracking": true,
+        "share_full_config": true,
+        "plex_labels": {
+            "enabled": false,
+            "label_mode": "fixed",
+            "fixed_label": "AI Butler"
+        }
+    },
+    "Overlay Settings": {
+        "overlays_enabled": false,
+        "textless_posters": false,
+        "plex_data_path": "",
+        "overlay_content_check_interval_days": 7,
+        "sync_items_per_run": 200
+    },
+    "Plex Smart Collections": {
+        "poster_design": 0,
+        "poster_accent": "",
+        "poster_eyebrow": "",
+        "poster_icon": "",
+        "poster_overlay_opacity": 60,
+        "poster_glow_opacity": 80,
+        "poster_glow_radius": 55,
+        "collections": {}
+    },
+    "Plex Movie Box Sets": {
+        "enabled": false,
+        "grab_missing": false,
+        "grab_version": "Default",
+        "collection_name_pattern": "{title} Collection",
+        "min_movies": 2,
+        "sort_order": "release_date_asc"
+    }
+}

@@ -1,0 +1,43 @@
+# Data and Databases
+**/data/
+**/postgres_data/
+**/riven_data/
+**/zurg/
+**/zurg_mnt/
+**/mounts/
+**/config/
+**/jellyseerr_config/
+**/cinesync_config/*
+**/cli_debrid_config/*
+**/library/
+**/library_pro/
+**/clean_library/
+**/logs/
+**/jellyfin/
+
+# Allow .example files in ignored directories
+!**/cinesync_config/*.example
+!**/cli_debrid_config/*.example
+
+# Secrets and Sensitive Configs
+.env
+config.yml
+cinesync_config/config.yml
+cli_debrid_config/config.json
+cli_debrid_config/secret_key
+cli_debrid_config/debrid.yml
+**/*.db
+**/*.sqlite
+
+# Binaries
+zurg1
+
+# System/IDE
+.DS_Store
+.idea/
+**/*.bak
+**/*.log
+
+# Large/Transient Files
+Terminal Saved Output.txt
+counts.txt

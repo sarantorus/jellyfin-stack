@@ -1,0 +1,9 @@
+zurg: v1
+token: YOUR_REAL_DEBRID_TOKEN
+host: "[::]"
+port: 9999
+
+# PERFORMANCE OPTIMIZATIONS
+realdebrid_timeout_secs: 120
+check_for_changes_every_secs: 3600
+enable_repair: false

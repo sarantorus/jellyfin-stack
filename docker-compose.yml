@@ -1,0 +1,81 @@
+services:
+  zurg:
+    image: ghcr.io/debridmediamanager/zurg-testing:latest
+    container_name: zurg
+    restart: unless-stopped
+    ports:
+      - "9999:9999"
+    volumes:
+      - ./config.yml:/app/config.yml
+      - ./data:/app/data
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    restart: unless-stopped
+    ports:
+      - "5055:5055"
+    volumes:
+      - ./jellyseerr_config:/app/config
+    environment:
+      - TZ=UTC
+
+  cli_debrid:
+    image: godver3/cli_debrid:latest
+    container_name: cli_debrid
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./cli_debrid_config:/user/config
+      - ./mounts/zurg:/mnt/zurg:ro
+    environment:
+      - TZ=UTC
+    tty: true
+    stdin_open: true
+    depends_on:
+      - zurg
+
+  cinesync:
+    image: sureshfizzy/cinesync:latest
+    container_name: cinesync
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+      - "8082:8082"
+    environment:
+      - TMDB_API_KEY=b03a5e64e4373cea32fb50a78b1c1558
+      - SOURCE_DIR=/source/__all__
+      - DESTINATION_DIR=/destination
+      - TZ=UTC
+      - PUID=501
+      - PGID=20
+    volumes:
+      - ./cinesync_config:/app/db
+      - ./mounts/zurg:/source:ro
+      - ./library_pro:/destination
+    depends_on:
+      - zurg
+
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    privileged: true
+    user: "501:20"
+    ulimits:
+      nofile:
+        soft: 524288
+        hard: 524288
+    ports:
+      - "8096:8096"
+    volumes:
+      - ~/jellyfin-stack/jellyfin/config:/config
+      - ~/jellyfin-stack/jellyfin/cache:/cache
+      - ./mounts/zurg:/media/Zurg:ro
+      - ./library_pro:/media/CineSync:ro
+    environment:
+      - JELLYFIN_PublishedServerUrl=http://localhost:8096
+      - DOTNET_SYSTEM_IO_DISABLE_BUFFERED_COPY=1
+    depends_on:
+      - cinesync
