@@ -111,6 +111,7 @@ final class CastCoordinator: ObservableObject {
 
     /// Dispatch to the correct sender for the receiver's transport.
     private func load(on receiver: Receiver, url: URL, mime: String, title: String) async throws {
+        sender?.disconnect()            // tear down any previous sender first
         let s = SenderFactory.make(for: receiver)
         sender = s
         try await s.connect(to: receiver)
@@ -119,6 +120,7 @@ final class CastCoordinator: ObservableObject {
     }
 
     private func remuxAndServe(source: URL, plan: PlaybackPlan) async throws -> (url: URL, mime: String) {
+        localServer?.stop()             // free any previously-bound server/port
         let server = GCDWebServerMediaServer(rootDir: serverRootDir)
         let remux = FFmpegRemuxer()
         localServer = server
@@ -129,21 +131,31 @@ final class CastCoordinator: ObservableObject {
     }
 
     /// For `.routeToPlayer`: a universal player decodes any codec, so no remux is
-    /// needed. Remote URLs pass through; local files are served raw over the LAN.
+    /// needed. Remote URLs pass through; local files are exposed as a single
+    /// symlink under the server root (so siblings in the real dir aren't served).
     private func sourceForPlayer(_ url: URL, container: String) async throws -> (URL, String) {
         let mime = mimeType(forContainer: container)
         guard url.isFileURL else { return (url, mime) }
-        let server = GCDWebServerMediaServer(rootDir: url.deletingLastPathComponent())
+
+        localServer?.stop()
+        let fm = FileManager.default
+        try? fm.createDirectory(at: serverRootDir, withIntermediateDirectories: true)
+        let link = serverRootDir.appendingPathComponent(url.lastPathComponent)
+        try? fm.removeItem(at: link)
+        try fm.createSymbolicLink(at: link, withDestinationURL: url)
+
+        let server = GCDWebServerMediaServer(rootDir: serverRootDir)
         localServer = server
         _ = try server.start()
-        let served = server.serve(item: ServedItem(kind: .progressiveFile(url), mimeType: mime))
+        let served = server.serve(item: ServedItem(kind: .progressiveFile(link), mimeType: mime))
         return (served, mime)
     }
 
     // MARK: - Helpers
 
     private func localFileURL(_ s: String) -> URL? {
-        let path = s.hasPrefix("file://") ? String(s.dropFirst(7)) : s
+        // Decode percent-encoding for file:// inputs (e.g. "My%20Movies").
+        let path = s.hasPrefix("file://") ? (URL(string: s)?.path ?? String(s.dropFirst(7))) : s
         return FileManager.default.fileExists(atPath: path) ? URL(fileURLWithPath: path) : nil
     }
 

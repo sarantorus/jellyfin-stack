@@ -1,6 +1,6 @@
 import Foundation
 
-enum Transport: String, Equatable {
+enum Transport: String, Equatable, Sendable {
     case airplay
     case googleCast
     case dlna
@@ -9,7 +9,7 @@ enum Transport: String, Equatable {
 }
 
 /// A discovered casting target on the local network.
-struct Receiver: Identifiable, Equatable {
+struct Receiver: Identifiable, Equatable, Sendable {
     let id: String          // stable per device (e.g. Cast deviceID, mDNS name)
     let name: String        // user-facing ("Living Room TV")
     let host: String        // resolved IP/hostname

@@ -4,17 +4,21 @@ import Network
 /// Discovers DLNA MediaRenderers and Roku devices via SSDP (UDP multicast
 /// M-SEARCH to 239.255.255.250:1900) and parses the responses.
 ///
-/// NOTE: sending to a multicast group on iOS 14+ requires the **multicast
-/// entitlement** (`com.apple.developer.networking.multicast`), which Apple grants
-/// on request. See SETUP.md. Without it, this transport silently finds nothing.
+/// Uses `NWConnectionGroup` + `NWMulticastGroup`: a plain `NWConnection` to the
+/// group address can transmit but won't deliver the unicast replies devices send
+/// back to our source port, so the group API is required.
+///
+/// NOTE: multicast on iOS 14+ requires the **multicast entitlement**
+/// (`com.apple.developer.networking.multicast`), granted by Apple on request.
+/// See SETUP.md. Without it the group send is silently dropped → nothing found.
 final class SSDPDiscovery: DiscoveryManager {
 
     private(set) var receivers: [Receiver] = []
     var onChange: (([Receiver]) -> Void)?
 
-    private var connection: NWConnection?
+    private var group: NWConnectionGroup?
     private let queue = DispatchQueue(label: "mastcast.ssdp")
-    private var found: [String: Receiver] = [:]
+    private var found: [String: Receiver] = [:]   // queue-confined
 
     private let searchTargets = [
         "urn:schemas-upnp-org:device:MediaRenderer:1",
@@ -23,54 +27,48 @@ final class SSDPDiscovery: DiscoveryManager {
 
     func startDiscovery() {
         guard let port = NWEndpoint.Port(rawValue: 1900) else { return }
-        let conn = NWConnection(host: "239.255.255.250", port: port, using: .udp)
-        connection = conn
-        conn.stateUpdateHandler = { [weak self] state in
-            if case .ready = state {
-                self?.sendSearches()
-                self?.receiveNext()
+        do {
+            let multicast = try NWMulticastGroup(for: [.hostPort(host: "239.255.255.250", port: port)])
+            let group = NWConnectionGroup(with: multicast, using: .udp)
+            self.group = group
+            group.setReceiveHandler(maximumMessageSize: 65535, rejectOversizedMessages: true) { [weak self] _, content, _ in
+                if let content, let text = String(data: content, encoding: .utf8) {
+                    self?.handle(response: text)
+                }
             }
+            group.stateUpdateHandler = { [weak self] state in
+                if case .ready = state { self?.sendSearches() }
+            }
+            group.start(queue: queue)
+        } catch {
+            // Invalid group or missing multicast entitlement — discovery yields nothing.
         }
-        conn.start(queue: queue)
     }
 
     func stopDiscovery() {
-        connection?.cancel()
-        connection = nil
+        group?.cancel()
+        group = nil
     }
 
     // MARK: - SSDP
 
     private func sendSearches() {
         for st in searchTargets {
-            let msg = """
-            M-SEARCH * HTTP/1.1\r
-            HOST: 239.255.255.250:1900\r
-            MAN: "ssdp:discover"\r
-            MX: 2\r
-            ST: \(st)\r
-            \r
-
-            """
-            connection?.send(content: msg.data(using: .utf8), completion: .idempotent)
-        }
-    }
-
-    private func receiveNext() {
-        connection?.receiveMessage { [weak self] data, _, _, error in
-            guard let self else { return }
-            if let data, let text = String(data: data, encoding: .utf8) {
-                self.handle(response: text)
-            }
-            if error == nil { self.receiveNext() }   // keep listening
+            // Exact CRLF framing terminated by a single blank line.
+            let msg = "M-SEARCH * HTTP/1.1\r\n"
+                + "HOST: 239.255.255.250:1900\r\n"
+                + "MAN: \"ssdp:discover\"\r\n"
+                + "MX: 2\r\n"
+                + "ST: \(st)\r\n\r\n"
+            group?.send(content: msg.data(using: .utf8), completion: { _ in })
         }
     }
 
     private func handle(response: String) {
         let headers = Self.parseHeaders(response)
         guard let location = headers["location"], let locURL = URL(string: location), let host = locURL.host else { return }
-        let blob = (headers["server"] ?? "") + (headers["st"] ?? "") + (headers["usn"] ?? "")
-        let isRoku = blob.lowercased().contains("roku")
+        let blob = ((headers["server"] ?? "") + (headers["st"] ?? "") + (headers["usn"] ?? "")).lowercased()
+        let isRoku = blob.contains("roku")
 
         let receiver: Receiver
         if isRoku {
@@ -80,7 +78,7 @@ final class SSDPDiscovery: DiscoveryManager {
                 serviceURL: "http://\(host):8060")
         } else {
             receiver = Receiver(
-                id: "dlna:\(location)", name: "DLNA (\(host))", host: host,
+                id: "dlna:\(host)", name: "DLNA (\(host))", host: host,
                 transport: .dlna, capabilities: .dlnaGeneric,
                 serviceURL: location)
         }
