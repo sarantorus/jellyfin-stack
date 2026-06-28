@@ -1,22 +1,40 @@
-# MastCast — Xcode setup
+# MastCast — local build setup (macOS + Xcode)
 
-The pure-logic core builds with SPM (`swift test`). The full app needs an Xcode
-project (iOS 16+) that compiles the `MastCast/` sources **including `Platform/`**
-and links three external dependencies.
+The pure-logic core builds anywhere with SPM (`swift test`). The full iOS app
+needs **a Mac with Xcode 15+** (iOS 16+ target). The repo ships an XcodeGen spec
+so you don't have to hand-wire the project.
 
-## 1. Create the app target
+## 0. Run the engine tests (any machine with a Swift toolchain)
 
-- New Xcode project → iOS App → SwiftUI, name `MastCast`, bundle id of your choice.
-- Add the `MastCast/` source folders to the target. (The SPM `Package.swift`
-  excludes `Platform/`; the Xcode app target must *include* it.)
+```sh
+cd MastCast
+swift test          # builds the pure-logic core + runs PlaybackPlannerTests
+```
+
+## 1. Generate the Xcode project (Mac)
+
+```sh
+brew install xcodegen          # one-time
+cd MastCast
+xcodegen generate              # reads project.yml → MastCast.xcodeproj
+open MastCast.xcodeproj        # Xcode resolves the two SPM deps automatically
+```
+
+`project.yml` wires the app target, the `MastCast/` sources (incl. `Platform/`),
+`Info.plist`, `MastCast.entitlements`, and the SPM dependencies. Set your signing
+team in Xcode (Signing & Capabilities) before running on a device.
 
 ## 2. Dependencies
 
-| Dependency        | Purpose                         | Install |
-| ----------------- | ------------------------------- | ------- |
-| `google-cast-sdk` | Chromecast / Android TV sender  | SwiftPM: `https://github.com/google/CastSDK-iOS` (or CocoaPods `google-cast-sdk`). Use the no-Guest-Mode variant if you don't need it. |
-| `ffmpeg-kit`      | ffprobe (probe) + remux         | The original `arthenica/ffmpeg-kit` was **archived in 2025**; use a maintained fork or self-host the `ffmpeg-kit-ios-full-gpl` xcframework. Module name: `ffmpegkit`. |
-| `GCDWebServer`    | embedded HLS server             | SwiftPM: `https://github.com/swisspol/GCDWebServer` |
+| Dependency        | Purpose                         | How it's wired |
+| ----------------- | ------------------------------- | -------------- |
+| Google Cast SDK   | Chromecast / Android TV sender  | SPM, already in `project.yml`: `https://github.com/SRGSSR/google-cast-sdk` (product `GoogleCast`). |
+| GCDWebServer      | embedded HLS server             | SPM, already in `project.yml`: `https://github.com/yene/GCDWebServer`. |
+| ffmpeg-kit        | ffprobe (probe) + remux         | **Manual.** Upstream `arthenica/ffmpeg-kit` was archived in 2025 with no SPM. Download a prebuilt `ffmpeg-kit-ios-full-gpl` release (or a maintained fork), unzip the `*.xcframework`s into `MastCast/Frameworks/`, then uncomment the `framework:` lines in `project.yml` and re-run `xcodegen generate`. Module name: `ffmpegkit`. |
+
+Until ffmpeg-kit is added, the app target won't compile (the probe/remux files
+`import ffmpegkit`). Everything else — Cast/AirPlay/DLNA/Roku/Kodi senders,
+discovery, the engine — does not depend on it.
 
 > **Licensing:** `ffmpeg-kit-*-gpl` builds pull in GPL components — incompatible
 > with closed-source App Store distribution. For shipping, either use an

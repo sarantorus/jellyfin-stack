@@ -1,0 +1,51 @@
+# XcodeGen spec — run `xcodegen generate` here to produce MastCast.xcodeproj.
+# Install XcodeGen first: `brew install xcodegen`.
+name: MastCast
+options:
+  bundleIdPrefix: com.mastcast
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+
+packages:
+  # Google Cast SDK delivered as an SPM-wrapped official XCFramework.
+  GoogleCast:
+    url: https://github.com/SRGSSR/google-cast-sdk
+    from: "4.8.4"
+  # GCDWebServer as a Swift package.
+  GCDWebServer:
+    url: https://github.com/yene/GCDWebServer
+    from: "3.5.7"
+  # ffmpeg-kit has NO maintained SPM (upstream archived 2025). Add the prebuilt
+  # `ffmpeg-kit-ios-full-gpl` xcframework(s) manually — see SETUP.md §2. Once the
+  # frameworks are in MastCast/Frameworks/, uncomment the dependency block below.
+
+targets:
+  MastCast:
+    type: application
+    platform: iOS
+    sources:
+      - path: MastCast          # the inner source dir (App, Engine, Platform, ...)
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.mastcast.app
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        SWIFT_VERSION: "5.9"
+        GENERATE_INFOPLIST_FILE: "NO"
+        INFOPLIST_FILE: Info.plist
+        CODE_SIGN_ENTITLEMENTS: MastCast.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - package: GoogleCast
+      - package: GCDWebServer
+      # ffmpeg-kit (uncomment after dropping the xcframeworks into Frameworks/):
+      # - framework: Frameworks/ffmpegkit.xcframework
+      #   embed: true
+      # - framework: Frameworks/libavcodec.xcframework
+      #   embed: true
+      # - framework: Frameworks/libavformat.xcframework
+      #   embed: true
+      # - framework: Frameworks/libavutil.xcframework
+      #   embed: true
+      # ...plus the remaining libav*/libsw* xcframeworks bundled in the release.
