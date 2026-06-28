@@ -6,7 +6,7 @@ import ffmpegkit   // ffmpeg-kit-ios (FFmpegKit). See SETUP.md.
 /// re-encoded to AAC (cheap relative to video). This covers the common
 /// "MKV/H.264 + AC3/DTS" case that native receivers reject.
 ///
-/// Uses the argument-array API (`executeAsyncWithArguments`) rather than a single
+/// Uses the argument-array API (`executeWithArgumentsAsync`) rather than a single
 /// command string, so paths with spaces need no shell-style quoting.
 final class FFmpegRemuxer: Remuxer {
     /// Serializes access to `sessionId` across the ffmpeg callback thread and `cancel()`.
