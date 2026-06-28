@@ -3,8 +3,13 @@ import GoogleCast   // google-cast-sdk. See SETUP.md.
 
 /// Google Cast sender (Chromecast / Android TV / Google TV), implemented against
 /// the Cast SDK's session + remote media client.
+///
+/// `@MainActor`-isolated because the Cast SDK requires main-thread access and its
+/// listener/delegate callbacks are delivered on the main thread; this also makes
+/// the continuation bookkeeping race-free.
+@MainActor
 final class CastSender: NSObject, MediaSender, GCKSessionManagerListener {
-    let transport: Transport = .googleCast
+    nonisolated let transport: Transport = .googleCast
 
     private var sessionManager: GCKSessionManager { GCKCastContext.sharedInstance().sessionManager }
     private var remoteMediaClient: GCKRemoteMediaClient? { sessionManager.currentCastSession?.remoteMediaClient }
@@ -20,6 +25,9 @@ final class CastSender: NSObject, MediaSender, GCKSessionManagerListener {
     }
 
     func connect(to receiver: Receiver) async throws {
+        guard connectContinuation == nil else {
+            throw SenderError.transportFailure("A Cast connection is already in progress")
+        }
         guard let device = device(for: receiver) else {
             throw SenderError.transportFailure("Cast device \(receiver.name) no longer available")
         }
@@ -48,7 +56,9 @@ final class CastSender: NSObject, MediaSender, GCKSessionManagerListener {
         builder.metadata = mediaMetadata
         let mediaInfo = builder.build()
 
-        try await request { client.loadMedia(mediaInfo) }
+        let options = GCKMediaLoadOptions()
+        options.autoplay = true
+        try await request { client.loadMedia(mediaInfo, with: options) }
     }
 
     func play()  async throws { try await request { remoteMediaClient?.play() } }
@@ -61,38 +71,71 @@ final class CastSender: NSObject, MediaSender, GCKSessionManagerListener {
         try await request { remoteMediaClient?.seek(with: options) }
     }
 
-    func disconnect() {
-        sessionManager.endSession()
-        sessionManager.remove(self)
+    nonisolated func disconnect() {
+        Task { @MainActor in
+            sessionManager.endSession()
+            sessionManager.remove(self)
+        }
     }
 
     // MARK: - GCKRequest bridging
 
-    /// Wrap a `GCKRequest`-returning call as async, completing on delegate callback.
+    /// Wrap a `GCKRequest`-returning call as async, completing on the delegate
+    /// callback. `GCKRequest.delegate` is **weak**, so the delegate must retain
+    /// itself until a terminal callback fires (complete / fail / cancel / abort).
     private func request(_ make: () -> GCKRequest?) async throws {
         guard let req = make() else { throw SenderError.notConnected }
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
-            req.delegate = RequestDelegate(cont)
+            req.delegate = RequestDelegate(cont)   // RequestDelegate keeps itself alive
         }
     }
 
-    // MARK: - GCKSessionManagerListener
+    // MARK: - GCKSessionManagerListener (delivered on main thread)
 
-    func sessionManager(_ sm: GCKSessionManager, didStart session: GCKSession) {
-        connectContinuation?.resume(); connectContinuation = nil
+    nonisolated func sessionManager(_ sm: GCKSessionManager, didStart session: GCKSession) {
+        Task { @MainActor in resumeConnect(with: nil) }
     }
-    func sessionManager(_ sm: GCKSessionManager, didFailToStart session: GCKSession, withError error: Error) {
-        connectContinuation?.resume(throwing: error); connectContinuation = nil
+    nonisolated func sessionManager(_ sm: GCKSessionManager, didFailToStart session: GCKSession, withError error: Error) {
+        Task { @MainActor in resumeConnect(with: error) }
+    }
+    nonisolated func sessionManager(_ sm: GCKSessionManager, didEnd session: GCKSession, withError error: Error?) {
+        // A session can end before `didStart` ever fires; don't leave connect hanging.
+        Task { @MainActor in resumeConnect(with: error ?? SenderError.transportFailure("Cast session ended")) }
+    }
+
+    private func resumeConnect(with error: Error?) {
+        guard let cont = connectContinuation else { return }
+        connectContinuation = nil
+        if let error { cont.resume(throwing: error) } else { cont.resume() }
     }
 }
 
-/// Bridges a single `GCKRequest` completion to a continuation. Retained by the
-/// request via its `delegate` until the callback fires.
+/// Bridges a single `GCKRequest` completion to a continuation. Retains itself via
+/// `selfRetain` until a terminal callback fires, because `GCKRequest.delegate` is
+/// a weak reference and would otherwise deallocate it immediately (→ a hang).
 private final class RequestDelegate: NSObject, GCKRequestDelegate {
     private var cont: CheckedContinuation<Void, Error>?
-    init(_ cont: CheckedContinuation<Void, Error>) { self.cont = cont }
-    func requestDidComplete(_ request: GCKRequest) { cont?.resume(); cont = nil }
-    func request(_ request: GCKRequest, didFailWithError error: GCKError) {
-        cont?.resume(throwing: error); cont = nil
+    private var selfRetain: RequestDelegate?
+
+    init(_ cont: CheckedContinuation<Void, Error>) {
+        self.cont = cont
+        super.init()
+        self.selfRetain = self
+    }
+
+    private func finish(_ error: Error?) {
+        guard let cont else { return }
+        self.cont = nil
+        if let error { cont.resume(throwing: error) } else { cont.resume() }
+        selfRetain = nil
+    }
+
+    func requestDidComplete(_ request: GCKRequest) { finish(nil) }
+    func request(_ request: GCKRequest, didFailWithError error: GCKError) { finish(error) }
+    func requestDidCancel(_ request: GCKRequest) {
+        finish(SenderError.transportFailure("Cast request was cancelled"))
+    }
+    func request(_ request: GCKRequest, didAbortWith abortReason: GCKRequestAbortReason) {
+        finish(SenderError.transportFailure("Cast request aborted (\(abortReason.rawValue))"))
     }
 }

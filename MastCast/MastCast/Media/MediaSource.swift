@@ -16,10 +16,5 @@ struct MediaInfo: Equatable {
     var bitDepth: Int          // 8 or 10
     var isRemote: Bool
     var isDRMProtected: Bool = false
-
-    static func == (l: MediaInfo, r: MediaInfo) -> Bool {
-        l.container == r.container && l.videoCodec == r.videoCodec &&
-        l.audioCodec == r.audioCodec && l.bitDepth == r.bitDepth &&
-        l.isRemote == r.isRemote && l.isDRMProtected == r.isDRMProtected
-    }
+    // Equatable is synthesized — every stored property is Equatable.
 }

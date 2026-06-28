@@ -55,17 +55,21 @@ struct PlaybackPlanner {
         let caps = target.capabilities
         let videoOK = caps.videoCodecs.contains(source.videoCodec) && source.bitDepth <= caps.maxBitDepth
         let audioOK = caps.audioCodecs.contains(source.audioCodec)
-        let containerOK = caps.supportsHLS || caps.containers.contains(source.container)
+        // Direct play requires the receiver to natively accept the *actual*
+        // container. HLS support does NOT mean it can fetch-and-demux a raw MKV —
+        // that only enables remuxing into HLS (step 2).
+        let containerDirectOK = caps.containers.contains(source.container)
+        let containerRemuxOK = caps.supportsHLS || caps.containers.contains("mp4")
 
         // Step 1 — fully compatible remote URL the receiver can fetch itself.
-        if videoOK && audioOK && containerOK && source.isRemote && caps.canFetchRemote {
+        if videoOK && audioOK && containerDirectOK && source.isRemote && caps.canFetchRemote {
             return .direct(url: sourceURL)
         }
 
         // Step 2 — video is fine; only the container/subs/audio need fixing.
         // Remux requires either HLS support or a container we can repackage into
         // that the target accepts.
-        if videoOK && (caps.supportsHLS || caps.containers.contains("mp4")) {
+        if videoOK && containerRemuxOK {
             return .remux(audio: audioOK ? .copy : .reencodeAAC)
         }
 
@@ -87,11 +91,13 @@ struct PlaybackPlanner {
 
     private func canDirect(_ source: MediaInfo, _ target: Receiver) -> Bool {
         let c = target.capabilities
+        // DRM can't be remuxed, so the container must be natively accepted —
+        // HLS support is irrelevant here (it would require a remux we can't do).
         return c.canFetchRemote && source.isRemote &&
             c.videoCodecs.contains(source.videoCodec) &&
             source.bitDepth <= c.maxBitDepth &&
             c.audioCodecs.contains(source.audioCodec) &&
-            (c.supportsHLS || c.containers.contains(source.container))
+            c.containers.contains(source.container)
     }
 
     /// Pick the best universal player on the network (prefer one on the same
