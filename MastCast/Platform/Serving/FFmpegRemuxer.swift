@@ -36,10 +36,12 @@ final class FFmpegRemuxer: Remuxer {
         ]
 
         let returnCode: ReturnCode? = await withCheckedContinuation { cont in
-            let session = FFmpegKit.executeAsyncWithArguments(args, withCompleteCallback: { session in
+            let session = FFmpegKit.executeWithArgumentsAsync(args, withCompleteCallback: { session in
                 cont.resume(returning: session?.getReturnCode())
             })
-            setSessionId(session?.getSessionId()?.intValue)
+            // getSessionId() returns `long` → Swift Int (non-optional), so the
+            // session-optional chain yields Int? directly.
+            setSessionId(session?.getSessionId())
         }
 
         guard let rc = returnCode, ReturnCode.isSuccess(rc) else {
