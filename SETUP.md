@@ -56,6 +56,25 @@ The Cast SDK and the local server both need Local Network access on iOS 14+:
 Add the **Background Modes → Audio, AirPlay, and Picture in Picture** capability
 if you want playback/serving to survive backgrounding.
 
+### Multicast entitlement (for DLNA + Roku discovery)
+
+`SSDPDiscovery` sends to the multicast group `239.255.255.250:1900`. On iOS 14+
+this requires the **multicast entitlement**
+`com.apple.developer.networking.multicast`, which Apple grants on request
+(https://developer.apple.com/contact/request/networking-multicast). Without it,
+Cast / AirPlay / Kodi discovery (Bonjour) still work, but DLNA and Roku silently
+find nothing.
+
+### Per-transport notes
+
+- **Kodi** (universal-player fallback): enable Settings → Services → Control →
+  "Allow remote control via HTTP" (port 8080). Optional Basic auth is supported
+  by `TVPlayerSender`.
+- **AirPlay**: iOS has **no public API to route to a specific AirPlay device**.
+  `AirPlaySender` plays via `AVPlayer`; the UI must present its `routePickerView()`
+  (an `AVRoutePickerView`) so the user selects the receiver. Tapping an AirPlay
+  device in the list configures playback but the user still confirms via the picker.
+
 ## 4. One-time init
 
 `MastCastApp.init()` already calls `CastDiscovery.configureCastContext()`, which
@@ -66,14 +85,23 @@ there if you register a custom Cast receiver.
 
 ```
 ContentView ─▶ CastCoordinator
-                 ├─ CastDiscovery (GCKDiscoveryManager) ──▶ [Receiver]
+                 ├─ CompositeDiscovery ──▶ [Receiver]
+                 │     ├─ CastDiscovery   (GCKDiscoveryManager)  — Chromecast/Android TV
+                 │     ├─ BonjourDiscovery (NetService)          — AirPlay, Kodi
+                 │     └─ SSDPDiscovery    (multicast, entitled)  — DLNA, Roku
                  ├─ FFprobeMediaProbe (ffprobe) ─────────▶ MediaInfo
                  ├─ PlaybackPlanner ─────────────────────▶ PlaybackPlan
-                 └─ execute:
-                      .direct  → CastSender.load(remoteURL)
-                      .remux   → FFmpegRemuxer → GCDWebServerMediaServer → CastSender.load(localHLS)
-                      .routeToPlayer / .transcode  → surfaced (next milestones)
+                 └─ execute via SenderFactory:
+                      .direct        → sender.load(remoteURL)
+                      .remux         → FFmpegRemuxer → GCDWebServerMediaServer → sender.load(localHLS)
+                      .routeToPlayer → TVPlayerSender.load(url)  (universal player decodes natively)
+                      .transcode     → surfaced (on-phone re-encode not enabled in MVP)
 ```
 
+Senders by transport: `CastSender` (Google Cast), `AirPlaySender` (AVPlayer +
+route picker), `DLNASender` (SOAP AVTransport), `RokuSender` (ECP Media Player),
+`TVPlayerSender` (Kodi JSON-RPC).
+
 Try it with a known-compatible URL first (an MP4/H.264 web link → `.direct`),
-then an MKV/H.264+AC3 link to exercise `.remux`.
+then an MKV/H.264+AC3 link to exercise `.remux`, then an HEVC-10bit/AV1 link with
+Kodi running to exercise `.routeToPlayer`.
