@@ -24,7 +24,7 @@ final class CastCoordinator: ObservableObject {
     private var localServer: LocalMediaServer?
     private var remuxer: Remuxer?
 
-    init(discovery: DiscoveryManager = CastDiscovery(),
+    init(discovery: DiscoveryManager = CompositeDiscovery(),
          probe: MediaProbe = FFprobeMediaProbe(),
          serverRootDir: URL = FileManager.default.temporaryDirectory.appendingPathComponent("mastcast-serve")) {
         self.discovery = discovery
@@ -71,18 +71,18 @@ final class CastCoordinator: ObservableObject {
             status = .casting
             switch plan {
             case .direct(let directURL):
-                try await loadOnCast(receiver, url: directURL,
-                                     mime: mimeType(forContainer: info.container), title: title)
+                try await load(on: receiver, url: directURL,
+                               mime: mimeType(forContainer: info.container), title: title)
 
             case .remux(let audio):
                 let served = try await remuxAndServe(source: url, plan: .remux(audio: audio))
-                try await loadOnCast(receiver, url: served.url, mime: served.mime, title: title)
+                try await load(on: receiver, url: served.url, mime: served.mime, title: title)
 
             case .routeToPlayer(let player):
-                // Hybrid fallback target. Wiring TVPlayerSender (Kodi JSON-RPC) is
-                // the next transport; surfaced here so the flow is explicit.
-                status = .failed("Needs TV player: route to \(player.name) not wired yet")
-                return
+                // The universal player decodes natively, so hand it the source
+                // untouched (remote URL pass-through, or local file served raw).
+                let (playerURL, mime) = try await sourceForPlayer(url, container: info.container)
+                try await load(on: player, url: playerURL, mime: mime, title: title)
 
             case .transcode:
                 status = .failed("On-phone transcode required (no universal player found) — not enabled in MVP")
@@ -109,12 +109,13 @@ final class CastCoordinator: ObservableObject {
 
     // MARK: - Steps
 
-    private func loadOnCast(_ receiver: Receiver, url: URL, mime: String, title: String) async throws {
-        let cast = CastSender()
-        sender = cast
-        try await cast.connect(to: receiver)
-        try await cast.load(url: url, metadata: CastMetadata(title: title, subtitle: nil, artworkURL: nil, mimeType: mime))
-        try await cast.play()
+    /// Dispatch to the correct sender for the receiver's transport.
+    private func load(on receiver: Receiver, url: URL, mime: String, title: String) async throws {
+        let s = SenderFactory.make(for: receiver)
+        sender = s
+        try await s.connect(to: receiver)
+        try await s.load(url: url, metadata: CastMetadata(title: title, subtitle: nil, artworkURL: nil, mimeType: mime))
+        try await s.play()
     }
 
     private func remuxAndServe(source: URL, plan: PlaybackPlan) async throws -> (url: URL, mime: String) {
@@ -125,6 +126,18 @@ final class CastCoordinator: ObservableObject {
         _ = try server.start()
         let item = try await remux.remux(source: source, plan: plan, into: serverRootDir)
         return (server.serve(item: item), item.mimeType)
+    }
+
+    /// For `.routeToPlayer`: a universal player decodes any codec, so no remux is
+    /// needed. Remote URLs pass through; local files are served raw over the LAN.
+    private func sourceForPlayer(_ url: URL, container: String) async throws -> (URL, String) {
+        let mime = mimeType(forContainer: container)
+        guard url.isFileURL else { return (url, mime) }
+        let server = GCDWebServerMediaServer(rootDir: url.deletingLastPathComponent())
+        localServer = server
+        _ = try server.start()
+        let served = server.serve(item: ServedItem(kind: .progressiveFile(url), mimeType: mime))
+        return (served, mime)
     }
 
     // MARK: - Helpers

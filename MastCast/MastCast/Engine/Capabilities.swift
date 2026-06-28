@@ -55,6 +55,17 @@ extension Capabilities {
         canFetchRemote: true,
         isUniversalPlayer: false)
 
+    /// Roku via the built-in Media Player channel — fairly capable (handles MKV
+    /// and HLS); codec support varies by model, so this is a moderate baseline.
+    static let roku = Capabilities(
+        containers: ["mp4", "mkv", "mov"],
+        videoCodecs: ["h264", "hevc"],
+        audioCodecs: ["aac", "ac3", "eac3"],
+        maxBitDepth: 10,
+        supportsHLS: true,
+        canFetchRemote: true,
+        isUniversalPlayer: false)
+
     /// Kodi / VLC / Infuse / Jellyfin client — the Hybrid fallback target.
     static let universalPlayer = Capabilities(
         containers: ["mkv", "mp4", "mov", "webm", "mpegts", "avi", "ts", "m2ts"],

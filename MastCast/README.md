@@ -73,18 +73,19 @@ platforms.
 
 ## Status
 
-**Cast path wired end-to-end** (web stream URLs → Chromecast/Android TV):
-discover → probe → plan → `.direct` or `.remux` → load. See
-[SETUP.md](SETUP.md) for the Xcode/dependency setup and the flow diagram.
+**All transports + the full decision ladder wired end-to-end.** Multi-transport
+discovery → probe → plan → `.direct` / `.remux` / `.routeToPlayer` → load via the
+matching sender. See [SETUP.md](SETUP.md) for Xcode/dependency setup and the flow.
 
 | Area | State |
 | ---- | ----- |
 | Decision engine (`Engine/PlaybackPlanner`) | ✅ implemented + unit-tested (pure SPM core) |
-| Cast discovery / sender (`Platform/`) | ✅ implemented (Google Cast SDK) |
 | Media probe (`Platform/Media/FFprobeMediaProbe`) | ✅ implemented (ffmpeg-kit) |
 | Remux + local HLS server | ✅ implemented (ffmpeg-kit + GCDWebServer) |
-| `.routeToPlayer` (Kodi/VLC fallback) | ⏳ next — TVPlayerSender |
-| AirPlay / DLNA / Roku senders | ⏳ interfaces defined, impls pending |
+| Discovery: Cast / AirPlay+Kodi / DLNA+Roku | ✅ Cast SDK + Bonjour + SSDP, aggregated |
+| Senders: Cast / AirPlay / DLNA / Roku / Kodi | ✅ implemented |
+| `.routeToPlayer` Hybrid hard-codec fallback | ✅ wired (Kodi) |
+| On-phone `.transcode` (last resort) | ⏳ surfaced but not enabled (by design) |
 | On-device build/run verification | ⏳ needs macOS — not run in this Linux env |
 
 The repo separates a **pure-logic core** (`MastCast/` minus `Platform/`, builds
