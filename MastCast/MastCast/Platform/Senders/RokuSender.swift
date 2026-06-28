@@ -25,15 +25,26 @@ final class RokuSender: MediaSender {
     }
 
     func load(url: URL, metadata: CastMetadata) async throws {
-        var components = URLComponents()
-        components.queryItems = [
-            URLQueryItem(name: "t", value: "v"),                       // type: video
-            URLQueryItem(name: "u", value: url.absoluteString),
-            URLQueryItem(name: "videoName", value: metadata.title),
-            URLQueryItem(name: "videoFormat", value: Self.rokuFormat(mime: metadata.mimeType, url: url)),
+        // Encode each value ourselves: URLComponents leaves `+` unescaped in
+        // queries, and Roku would read `+` as a space in the media URL.
+        let pairs: [(String, String)] = [
+            ("t", "v"),                       // type: video
+            ("u", url.absoluteString),
+            ("videoName", metadata.title),
+            ("videoFormat", Self.rokuFormat(mime: metadata.mimeType, url: url)),
         ]
-        let query = components.percentEncodedQuery ?? ""
+        let query = pairs
+            .map { "\($0.0)=\(Self.encode($0.1))" }
+            .joined(separator: "&")
         _ = try await ecp("launch/\(mediaPlayerChannel)?\(query)", method: "POST")
+    }
+
+    /// Percent-encode a query value, escaping everything except unreserved chars
+    /// (so `+`, `&`, `=`, `/`, `?` etc. are all encoded).
+    private static func encode(_ value: String) -> String {
+        var allowed = CharacterSet.alphanumerics
+        allowed.insert(charactersIn: "-._~")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
     }
 
     // ECP keypresses. Play toggles play/pause; there is no separate resume verb.

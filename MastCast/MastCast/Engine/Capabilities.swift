@@ -2,7 +2,7 @@ import Foundation
 
 /// What a receiver can decode/play. Static profiles are refined at runtime
 /// (e.g. by querying a Chromecast's model, or a Cast media status).
-struct Capabilities: Equatable {
+struct Capabilities: Equatable, Sendable {
     var containers: Set<String>
     var videoCodecs: Set<String>
     var audioCodecs: Set<String>

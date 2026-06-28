@@ -41,7 +41,14 @@ final class BonjourDiscovery: NSObject, DiscoveryManager {
     }
 
     private func spec(for service: NetService) -> ServiceSpec? {
-        specs.first { $0.type == service.type }
+        // The browser reports the fully-qualified type incl. domain
+        // (e.g. "_airplay._tcp.local."), so match by prefix, not equality.
+        specs.first { service.type.hasPrefix($0.type) }
+    }
+
+    /// Stable id independent of the (variable) reported type string.
+    private func id(for service: NetService, spec: ServiceSpec) -> String {
+        "\(spec.transport.rawValue):\(service.name)"
     }
 }
 
@@ -54,17 +61,17 @@ extension BonjourDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
     }
 
     func netServiceBrowser(_ browser: NetServiceBrowser, didRemove service: NetService, moreComing: Bool) {
-        let id = "\(service.type)\(service.name)"
-        found[id] = nil
+        guard let spec = spec(for: service) else { return }
+        found[id(for: service, spec: spec)] = nil
         emit()
     }
 
     func netServiceDidResolveAddress(_ service: NetService) {
         defer { resolving.remove(service) }
         guard let spec = spec(for: service), let ip = Self.ipv4(from: service) else { return }
-        let id = "\(service.type)\(service.name)"
-        found[id] = Receiver(
-            id: id,
+        let identifier = id(for: service, spec: spec)
+        found[identifier] = Receiver(
+            id: identifier,
             name: service.name,
             host: ip,
             transport: spec.transport,
@@ -86,7 +93,8 @@ extension BonjourDiscovery: NetServiceBrowserDelegate, NetServiceDelegate {
         guard let addresses = service.addresses else { return nil }
         for data in addresses {
             let ip: String? = data.withUnsafeBytes { raw -> String? in
-                guard let base = raw.baseAddress else { return nil }
+                guard let base = raw.baseAddress,
+                      raw.count >= MemoryLayout<sockaddr_in>.size else { return nil }
                 let sa = base.assumingMemoryBound(to: sockaddr.self)
                 guard sa.pointee.sa_family == UInt8(AF_INET) else { return nil }
                 var addr = base.assumingMemoryBound(to: sockaddr_in.self).pointee.sin_addr

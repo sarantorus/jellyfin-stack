@@ -84,9 +84,11 @@ final class DLNASender: MediaSender {
     static func avTransportControlURL(descriptionXML: Data, base: URL) -> URL? {
         let parser = DLNADescriptionParser(wantedServiceType: "AVTransport")
         guard let control = parser.parse(descriptionXML) else { return nil }
-        // controlURL may be absolute or relative to the description URL's origin.
+        // controlURL may be absolute or relative. Per UPnP, relative URLs resolve
+        // against <URLBase> when present, otherwise the description URL's origin.
         if let abs = URL(string: control), abs.scheme != nil { return abs }
-        return URL(string: control, relativeTo: base)?.absoluteURL
+        let resolveBase = parser.urlBase.flatMap { URL(string: $0) } ?? base
+        return URL(string: control, relativeTo: resolveBase)?.absoluteURL
     }
 
     static func didlMetadata(url: URL, title: String, mime: String) -> String {
@@ -117,6 +119,8 @@ private final class DLNADescriptionParser: NSObject, XMLParserDelegate {
     private var serviceType = ""
     private var controlURL = ""
     private var matchedControlURL: String?
+    /// Optional top-level <URLBase> element (overrides the description URL origin).
+    private(set) var urlBase: String?
 
     init(wantedServiceType: String) { self.wantedServiceType = wantedServiceType }
 
@@ -134,6 +138,10 @@ private final class DLNADescriptionParser: NSObject, XMLParserDelegate {
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
+        if currentElement == "URLBase", !inService {
+            urlBase = (urlBase ?? "") + string.trimmingCharacters(in: .whitespacesAndNewlines)
+            return
+        }
         guard inService else { return }
         switch currentElement {
         case "serviceType": serviceType += string
