@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required to send SSDP M-SEARCH (DLNA/Roku discovery). Apple grants this
+         on request: https://developer.apple.com/contact/request/networking-multicast
+         Your provisioning profile must include it, or device builds will fail.
+         Remove this key (and SSDPDiscovery loses DLNA/Roku) if you don't have it;
+         Cast/AirPlay/Kodi discovery via Bonjour still works without it. -->
+    <key>com.apple.developer.networking.multicast</key>
+    <true/>
+</dict>
+</plist>
