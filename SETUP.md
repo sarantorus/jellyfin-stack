@@ -42,6 +42,9 @@ discovery, the engine — does not depend on it.
 
 ## 3. Required Info.plist keys
 
+> These are **already set** in the repo's `Info.plist` (wired via `project.yml`).
+> This section is reference for what each key is for.
+
 The Cast SDK and the local server both need Local Network access on iOS 14+:
 
 ```xml
@@ -57,7 +60,7 @@ The Cast SDK and the local server both need Local Network access on iOS 14+:
   <string>_CC1AD845._googlecast._tcp</string>
   <string>_airplay._tcp</string>        <!-- AirPlay / Apple TV -->
   <string>_raop._tcp</string>           <!-- AirPlay audio -->
-  <string>_xbmc-jsonrpc._tcp</string>   <!-- Kodi (universal-player fallback) -->
+  <string>_xbmc-jsonrpc-h._tcp</string> <!-- Kodi HTTP JSON-RPC (must match BonjourDiscovery) -->
 </array>
 <!-- DLNA and Roku use SSDP/UDP multicast, not Bonjour, so they need no
      NSBonjourServices entry — but they still require NSLocalNetworkUsageDescription. -->
