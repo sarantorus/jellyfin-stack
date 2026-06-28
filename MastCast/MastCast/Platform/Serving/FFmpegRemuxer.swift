@@ -1,3 +1,4 @@
+#if canImport(ffmpegkit)
 import Foundation
 import ffmpegkit   // ffmpeg-kit-ios (FFmpegKit). See SETUP.md.
 
@@ -59,3 +60,4 @@ final class FFmpegRemuxer: Remuxer {
         lock.lock(); sessionId = id; lock.unlock()
     }
 }
+#endif

@@ -25,11 +25,21 @@ final class CastCoordinator: ObservableObject {
     private var remuxer: Remuxer?
 
     init(discovery: DiscoveryManager = CompositeDiscovery(),
-         probe: MediaProbe = FFprobeMediaProbe(),
+         probe: MediaProbe? = nil,
          serverRootDir: URL = FileManager.default.temporaryDirectory.appendingPathComponent("mastcast-serve")) {
         self.discovery = discovery
-        self.probe = probe
         self.serverRootDir = serverRootDir
+        if let probe {
+            self.probe = probe
+        } else {
+            // Real codec probing needs ffmpeg-kit; without it, fall back to a
+            // dependency-free heuristic so the app builds and runs out of the box.
+            #if canImport(ffmpegkit)
+            self.probe = FFprobeMediaProbe()
+            #else
+            self.probe = HeuristicMediaProbe()
+            #endif
+        }
         self.discovery.onChange = { [weak self] devices in
             Task { @MainActor in self?.receivers = devices }
         }
@@ -120,6 +130,7 @@ final class CastCoordinator: ObservableObject {
     }
 
     private func remuxAndServe(source: URL, plan: PlaybackPlan) async throws -> (url: URL, mime: String) {
+        #if canImport(ffmpegkit)
         localServer?.stop()             // free any previously-bound server/port
         let server = GCDWebServerMediaServer(rootDir: serverRootDir)
         let remux = FFmpegRemuxer()
@@ -128,6 +139,10 @@ final class CastCoordinator: ObservableObject {
         _ = try server.start()
         let item = try await remux.remux(source: source, plan: plan, into: serverRootDir)
         return (server.serve(item: item), item.mimeType)
+        #else
+        throw SenderError.transportFailure(
+            "On-device remuxing needs the ffmpeg-kit library (not bundled). Add it (see SETUP.md), or cast to a TV running Kodi/VLC instead.")
+        #endif
     }
 
     /// For `.routeToPlayer`: a universal player decodes any codec, so no remux is

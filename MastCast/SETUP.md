@@ -30,11 +30,12 @@ team in Xcode (Signing & Capabilities) before running on a device.
 | ----------------- | ------------------------------- | -------------- |
 | Google Cast SDK   | Chromecast / Android TV sender  | SPM, already in `project.yml`: `https://github.com/SRGSSR/google-cast-sdk` (product `GoogleCast`). |
 | GCDWebServer      | embedded HLS server             | SPM, already in `project.yml`: `https://github.com/yene/GCDWebServer`. |
-| ffmpeg-kit        | ffprobe (probe) + remux         | **Manual.** Upstream `arthenica/ffmpeg-kit` was archived in 2025 with no SPM. Download a prebuilt `ffmpeg-kit-ios-full-gpl` release (or a maintained fork), unzip the `*.xcframework`s into `MastCast/Frameworks/`, then uncomment the `framework:` lines in `project.yml` and re-run `xcodegen generate`. Module name: `ffmpegkit`. |
+| ffmpeg-kit        | real codec probing + on-phone remux | **Optional.** The app builds and runs WITHOUT it (the ffmpeg files are gated behind `#if canImport(ffmpegkit)`, with a dependency-free `HeuristicMediaProbe` fallback). To enable accurate probing + on-phone remux: upstream `arthenica/ffmpeg-kit` was archived in 2025 with no SPM, so download a prebuilt `ffmpeg-kit-ios-full-gpl` release (or a maintained fork), unzip the `*.xcframework`s into `MastCast/Frameworks/`, then uncomment the `framework:` lines in `project.yml` and re-run `xcodegen generate`. Module name: `ffmpegkit`. |
 
-Until ffmpeg-kit is added, the app target won't compile (the probe/remux files
-`import ffmpegkit`). Everything else — Cast/AirPlay/DLNA/Roku/Kodi senders,
-discovery, the engine — does not depend on it.
+**Without ffmpeg-kit** the app still discovers TVs and casts: direct play to
+Chromecast/AirPlay/Roku/DLNA for compatible streams, and route-to-player for
+anything a Kodi/VLC box can decode. Only the on-phone *remux* path is disabled
+(it shows a clear message telling you to add ffmpeg-kit or use a TV player).
 
 > **Licensing:** `ffmpeg-kit-*-gpl` builds pull in GPL components — incompatible
 > with closed-source App Store distribution. For shipping, either use an

@@ -1,3 +1,4 @@
+#if canImport(ffmpegkit)
 import Foundation
 import ffmpegkit   // ffmpeg-kit-ios (FFprobeKit). See SETUP.md for the dependency.
 
@@ -79,3 +80,4 @@ final class FFprobeMediaProbe: MediaProbe {
         return 8
     }
 }
+#endif
