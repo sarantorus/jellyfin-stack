@@ -25,7 +25,8 @@ targets:
     type: application
     platform: iOS
     sources:
-      - path: MastCast          # the inner source dir (App, Engine, Platform, ...)
+      - path: MastCast          # inner source dir: Engine, Media, Discovery,
+                                # Serving, Senders, Platform (incl. Platform/App @main)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mastcast.app
@@ -34,8 +35,12 @@ targets:
         SWIFT_VERSION: "5.9"
         GENERATE_INFOPLIST_FILE: "NO"
         INFOPLIST_FILE: Info.plist
-        CODE_SIGN_ENTITLEMENTS: MastCast.entitlements
         TARGETED_DEVICE_FAMILY: "1,2"
+        # CODE_SIGN_ENTITLEMENTS is intentionally OFF by default so device/archive
+        # builds work out of the box (Cast/AirPlay/Kodi). The multicast entitlement
+        # needed for DLNA/Roku (SSDP) breaks signing unless your provisioning
+        # profile carries it (Apple grants on request). To enable DLNA/Roku:
+        # CODE_SIGN_ENTITLEMENTS: MastCast.entitlements
     dependencies:
       - package: GoogleCast
       - package: GCDWebServer
