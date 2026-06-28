@@ -81,7 +81,7 @@ struct ContentView: View {
     private func icon(for t: Transport) -> String {
         switch t {
         case .googleCast: return "tv"
-        case .airplay: return "airplayvideo"
+        case .airplay: return "airplay.video"
         case .dlna: return "play.tv"
         case .roku: return "tv.inset.filled"
         case .tvPlayer: return "play.rectangle.on.rectangle"

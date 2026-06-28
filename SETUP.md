@@ -30,16 +30,27 @@ The Cast SDK and the local server both need Local Network access on iOS 14+:
 <key>NSLocalNetworkUsageDescription</key>
 <string>MastCast finds and streams to TVs on your network.</string>
 
+<!-- EVERY Bonjour service type the app browses must be listed, or iOS 14+
+     silently returns no results for the missing ones. -->
 <key>NSBonjourServices</key>
 <array>
   <string>_googlecast._tcp</string>
   <!-- Receiver-app-scoped service; CC1AD845 is the default media receiver -->
   <string>_CC1AD845._googlecast._tcp</string>
+  <string>_airplay._tcp</string>        <!-- AirPlay / Apple TV -->
+  <string>_raop._tcp</string>           <!-- AirPlay audio -->
+  <string>_xbmc-jsonrpc._tcp</string>   <!-- Kodi (universal-player fallback) -->
 </array>
+<!-- DLNA and Roku use SSDP/UDP multicast, not Bonjour, so they need no
+     NSBonjourServices entry — but they still require NSLocalNetworkUsageDescription. -->
 
-<!-- Allow plain-HTTP stream URLs and the local HLS server -->
+<!-- NSAllowsLocalNetworking covers the LAN HLS server with no App Store
+     justification. Add per-domain HTTP exceptions only for the stream hosts you
+     actually use, rather than the blanket NSAllowsArbitraryLoads. -->
 <key>NSAppTransportSecurity</key>
-<dict><key>NSAllowsArbitraryLoads</key><true/></dict>
+<dict>
+  <key>NSAllowsLocalNetworking</key><true/>
+</dict>
 ```
 
 Add the **Background Modes → Audio, AirPlay, and Picture in Picture** capability

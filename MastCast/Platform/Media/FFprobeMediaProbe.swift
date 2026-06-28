@@ -2,19 +2,28 @@ import Foundation
 import ffmpegkit   // ffmpeg-kit-ios (FFprobeKit). See SETUP.md for the dependency.
 
 /// Concrete `MediaProbe` backed by ffprobe (ffmpeg-kit). Works for both local
-/// files and remote URLs; for remote it reads only the header/early packets so
-/// it does not download the whole stream.
+/// files and remote URLs. Probing is bounded by a timeout so a slow/large remote
+/// source (e.g. an MP4 whose `moov` atom is at the end) can't hang the flow.
 final class FFprobeMediaProbe: MediaProbe {
+
+    /// ffprobe timeout in milliseconds.
+    private let timeoutMs: Int32
+
+    init(timeoutMs: Int32 = 15_000) { self.timeoutMs = timeoutMs }
 
     func probe(_ source: MediaSource) async throws -> MediaInfo {
         let path = source.isRemote ? source.url.absoluteString : source.url.path
 
         let info: MediaInformation? = await withCheckedContinuation { cont in
-            FFprobeKit.getMediaInformationAsync(path) { session in
-                cont.resume(returning: (session as? MediaInformationSession)?.getMediaInformation())
-            }
+            FFprobeKit.getMediaInformationAsync(
+                path,
+                withCompleteCallback: { session in
+                    cont.resume(returning: session?.getMediaInformation())
+                },
+                withLogCallback: nil,
+                withTimeout: timeoutMs)
         }
-        guard let info else { throw ProbeError.unreadable }
+        guard let info else { throw ProbeError.timedOut }
 
         let container = normalizeContainer(info.getFormat())
         let streams = info.getStreams() ?? []
@@ -57,11 +66,16 @@ final class FFprobeMediaProbe: MediaProbe {
         }
     }
 
-    /// Derive bit depth from pix_fmt (e.g. "yuv420p10le" -> 10), default 8.
+    /// Derive bit depth. Prefer `bits_per_raw_sample` (explicit), fall back to
+    /// pix_fmt (e.g. "yuv420p10le"/"p010le" -> 10), default 8.
     private func bitDepth(of stream: StreamInformation) -> Int {
-        let pixFmt = (stream.getAllProperties()?["pix_fmt"] as? String)?.lowercased() ?? ""
+        let props = stream.getAllProperties()
+        if let bprs = (props?["bits_per_raw_sample"] as? String).flatMap(Int.init), bprs > 0 {
+            return bprs
+        }
+        let pixFmt = (props?["pix_fmt"] as? String)?.lowercased() ?? ""
         if pixFmt.contains("12le") || pixFmt.contains("12be") { return 12 }
-        if pixFmt.contains("10le") || pixFmt.contains("10be") { return 10 }
+        if pixFmt.contains("10le") || pixFmt.contains("10be") || pixFmt.contains("p010") { return 10 }
         return 8
     }
 }

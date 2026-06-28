@@ -44,8 +44,19 @@ final class CastCoordinator: ObservableObject {
 
     /// Cast `urlString` (web stream or local file path) to `receiver`.
     func cast(_ urlString: String, to receiver: Receiver, title: String) async {
-        guard let url = URL(string: urlString) ?? localFileURL(urlString) else {
-            status = .failed("Invalid URL"); return
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Resolve a local file first: a bare path like "/var/.../movie.mkv" also
+        // parses as a schemeless URL, which would be mislabeled as remote.
+        let resolved: URL?
+        if let local = localFileURL(trimmed) {
+            resolved = local
+        } else if let parsed = URL(string: trimmed), parsed.scheme != nil {
+            resolved = parsed
+        } else {
+            resolved = nil
+        }
+        guard let url = resolved else {
+            status = .failed("Invalid URL or file path"); return
         }
         let source = MediaSource(url: url)
 
