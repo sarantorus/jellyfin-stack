@@ -73,7 +73,21 @@ platforms.
 
 ## Status
 
-Scaffold + design. The decision engine (`Engine/PlaybackPlanner.swift`) is
-implemented and unit-tested logic; protocol senders, discovery, and the
-embedded server are defined as interfaces with implementation notes. See
-[ARCHITECTURE.md](ARCHITECTURE.md) for the full build plan and library choices.
+**Cast path wired end-to-end** (web stream URLs → Chromecast/Android TV):
+discover → probe → plan → `.direct` or `.remux` → load. See
+[SETUP.md](SETUP.md) for the Xcode/dependency setup and the flow diagram.
+
+| Area | State |
+| ---- | ----- |
+| Decision engine (`Engine/PlaybackPlanner`) | ✅ implemented + unit-tested (pure SPM core) |
+| Cast discovery / sender (`Platform/`) | ✅ implemented (Google Cast SDK) |
+| Media probe (`Platform/Media/FFprobeMediaProbe`) | ✅ implemented (ffmpeg-kit) |
+| Remux + local HLS server | ✅ implemented (ffmpeg-kit + GCDWebServer) |
+| `.routeToPlayer` (Kodi/VLC fallback) | ⏳ next — TVPlayerSender |
+| AirPlay / DLNA / Roku senders | ⏳ interfaces defined, impls pending |
+| On-device build/run verification | ⏳ needs macOS — not run in this Linux env |
+
+The repo separates a **pure-logic core** (`MastCast/` minus `Platform/`, builds
+on any platform via SPM) from **`Platform/`** (Apple- and SDK-dependent
+implementations, built only in the Xcode app target). See
+[ARCHITECTURE.md](ARCHITECTURE.md) for the full design.

@@ -15,7 +15,10 @@ let package = Package(
         .target(
             name: "MastCast",
             path: "MastCast",
-            exclude: ["App"]
+            // Platform/ holds Apple- and SDK-dependent concrete implementations
+            // (GoogleCast, ffmpeg-kit, GCDWebServer, AVFoundation, SwiftUI) that
+            // only build inside the Xcode project, not the cross-platform core.
+            exclude: ["Platform"]
         ),
         .testTarget(
             name: "MastCastTests",
